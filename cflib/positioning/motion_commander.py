@@ -1,44 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-#     ||          ____  _ __
-#  +------+      / __ )(_) /_______________ _____  ___
-#  | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
-#  +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
-#   ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
-#
-#  Copyright (C) 2017 Bitcraze AB
-#
-#  This program is free software; you can redistribute it and/or
-#  modify it under the terms of the GNU General Public License
-#  as published by the Free Software Foundation; either version 2
-#  of the License, or (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-"""
-The MotionCommander is used to make it easy to write scripts that moves the
-Crazyflie around. Some sort of positioning support is required, for instance
-the Flow deck.
-
-The motion commander uses velocity setpoints and does not have a notion of
-absolute position, the error in position will accumulate over time.
-
-The API contains a set of primitives that are easy to understand and use, such
-as "go forward" or "turn around".
-
-There are two flavors of primitives, one that is blocking and returns when
-a motion is completed, while the other starts a motion and returns immediately.
-In the second variation the user has to stop or change the motion when
-appropriate by issuing new commands.
-
-The MotionCommander can be used as context manager using the with keyword. In
-this mode of operation takeoff and landing is executed when the context is
-created/closed.
-"""
 import math
 import time
 from queue import Empty
@@ -125,6 +84,35 @@ class MotionCommander:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.land()
+        
+    def adjust_pitch(self, angle_degrees):
+        """
+        Adjust the pitch of the drone by a given angle in degrees.
+        """
+        pitch_rate = angle_degrees / 2 # Adjust the rate according to the desired angle
+        self.start_linear_motion(0.0, 0.0, 0.0, rate_yaw = 0.0) # Cancel out any existing linear motion
+        time.sleep(0.1) # Wait for the linear motion to stop
+        self._set_vel_setpoint(pitch_rate, 0.0, 0.0, 0.0) # Adjust the pitch
+        time.sleep(0.1)
+        
+        self.start_linear_motion()
+        
+    def adjust_roll(self, angle_degrees):
+        """ 
+        Adjust the roll of the drone by a given angle in degrees.
+        """
+        roll_rate = angle_degrees / 2 # Adjust the rate according to the desired angle
+        self.start_linear_motion(0.0, 0.0, 0.0, rate_yaw = 0.0) # Cancel out any existing linear motion
+        time.sleep(0.1) # Wait for the linear motion to stop
+        self._set_vel_setpoint(0.0, roll_rate, 0.0, 0.0) # Adjust the roll
+        time.sleep(0.1)
+        
+    def adjust_yaw(self, angle_degrees):
+        """ 
+        Adjust the yaw of the drone by a given angle in degrees.
+        """
+        self.start_linear_motion(0.0, 0.0, 0.0, rate_yaw = angle_degrees) # Adjust the yaw
+        time.sleep(0.1)
 
     def left(self, distance_m, velocity=VELOCITY):
         """
